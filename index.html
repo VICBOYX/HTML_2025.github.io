@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>自主导航</title>
+    <style>
+        #container{
+            width: 100%;
+            height: 800px;
+            margin: 0 auto;
+            border: 1px solid #999;
+        }
+        .btn-group{
+            width: 100%;
+            margin: 20px auto 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .btn-group button{
+            position: relative;
+            padding: 8px 16px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        #startBtn:hover{
+            background: #90ee90;
+        }
+        #endtBtn:hover{
+            background: #ff0000;
+        }
+        #clearBtn:hover{
+            background: #f5f5f5;
+        }
+		#goBtn:hover{
+		    background: #FFA500;
+		}
+		#goBtn.active{
+		    background: #32cd32;
+		}
+		#realyBtn:hover{
+		    background: #FFA500;
+		}
+		#realyBtn.active{
+		    background: #32cd32;
+		}
+		#jiaZaiBtn:hover{
+		    background: #FFA500;
+		}
+		#yvLanBtn:hover{
+		    background: #FFA500;
+		}
+		
+		#trackStartBtn:hover{
+		    background: #FFA500;
+		}
+		#trackPauseBtn:hover{
+		    background: #FFA500;
+		}
+		#trackStopBtn:hover{
+		    background: #FFA500;
+		}
+		#trackResumeBtn:hover{
+		    background: #FFA500;
+		}
+		
+
+    </style>
+    <!-- <script src="https://api.map.baidu.com/api?v=3&ak=2AekvGJnzV3Oo1bxkkmtL2DoMhiDfpwW"></script> -->
+	<script src="//api.map.baidu.com/api?type=webgl&v=1.0&ak=2AekvGJnzV3Oo1bxkkmtL2DoMhiDfpwW"></script>
+	
+	<script type="text/javascript" src="https://unpkg.com/@bmapgl-plugin/track"></script>
+	<script type="text/javascript" src="//mapopen-pub-jsapi.bj.bcebos.com/jsapiGlgeo/track.js"></script>
+	
+	<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+</head>
+<body>
+    <div id="container"></div>
+    <div class="btn-group">
+        <button id="startBtn">起点</button>
+        <button id="clearBtn">一键清除所有标记</button>
+        <button id="endtBtn">终点</button>
+		<button id="jiaZaiBtn">加载</button>
+		<button id="realyBtn">解析</button>
+		<button id="yvLanBtn">预览</button>
+		<button id="goBtn">GO</button>
+		
+		<button id="trackStartBtn">开始</button>
+		<button id="trackPauseBtn">暂停</button>
+		<button id="trackResumeBtn">继续</button>
+		<button id="trackStopBtn">重置</button>
+		
+    </div>
+
+    <script type="text/javascript">
+		var X = 116.404;
+		var Y = 39.915;
+		var trackLine = null;
+		
+		var map = new BMapGL.Map('container', {
+		                preserveDrawingBuffer: true // 保留绘图缓冲区
+		            });
+					
+		map.centerAndZoom(new BMapGL.Point(116.404, 39.915), 14); // 北京坐标
+		
+
+		var startBtnState = 0; // 0=未激活，1=已激活
+		var endBtnState = 0;  // 0=未激活，1=已激活
+		var goBtnState = 0;
+		var realyBtnState = 0;
+		
+		map.enableScrollWheelZoom(true); // 允许滚轮缩放
+		var scaleCtrl = new BMapGL.ScaleControl();  // 添加比例尺控件
+		map.addControl(scaleCtrl);
+		var zoomCtrl = new BMapGL.ZoomControl();  // 添加缩放控件
+		map.addControl(zoomCtrl);
+		var cityCtrl = new BMapGL.CityListControl();  // 添加城市列表控件
+		map.addControl(cityCtrl);
+		
+		var point = new BMapGL.Point(X, Y);
+		var marker = new BMapGL.Marker(point);  // 创建标记对象
+		map.addOverlay(marker);  // 将标记添加到地图
+		
+		var myMarkers = [];
+		
+        map.addEventListener("click", function(e){
+			// alert('点击的经纬度：' + e.latlng.lng + ', ' + e.latlng.lat);
+			
+            var clickPoint_X = e.latlng.lng;
+			var clickPoint_Y = e.latlng.lat;
+			alert('点击的经纬度：' + clickPoint_X + ',' + clickPoint_Y);
+			console.log(e);
+			
+			var C = new BMapGL.Point(clickPoint_X, clickPoint_Y); // 定义地理坐标点
+			D = map.pointToPixel(C);          // 转换为像素坐标
+			console.log("XY",D);
+			
+			var C1 = new BMapGL.Point(0, 0); // 定义地理坐标点
+			D1 = map.pointToPixel(C1);          // 转换为像素坐标
+			console.log("0,0",D1);
+			
+			var A = new BMapGL.Pixel(D.x, D.y); // 定义像素坐标对象
+			B = map.pixelToPoint(A);      // 转换为地理坐标点
+			console.log("实际经纬度",B);
+			
+			var myPoint = new BMapGL.Point(clickPoint_X,clickPoint_Y);
+			myMarker = new BMapGL.Marker(myPoint);
+			
+			
+			var myMarker = new BMapGL.Marker(myPoint);  // 创建标记对象
+			map.addOverlay(myMarker);  // 将标记添加到地图
+			myMarkers.push(myMarker);
+			console.log(myMarkers);
+			
+        });
+        
+        
+		document.getElementById("startBtn").addEventListener("click", function(){
+			startBtnState = 1;
+			if (endBtnState === 1){
+				endBtnState = 0;
+			}
+			alert("start");
+		});
+		document.getElementById("endtBtn").addEventListener("click", function(){
+			endBtnState = 1;
+			if (startBtnState === 1){
+				startBtnState = 0;
+			}
+		});
+        
+        document.getElementById("clearBtn").addEventListener("click", function(){
+            if (myMarkers.length === 0) {
+                alert("当前没有可清除的标记！");
+                return;
+            }
+            myMarkers.forEach(function(markerItem){
+                map.removeOverlay(markerItem);
+            });
+            myMarkers = [];
+			startBtnState = 0;
+			endBtnState = 0;
+            const goBtn = document.getElementById("goBtn");
+            goBtnState = 0;
+            goBtn.classList.remove("active");
+            alert("所有标记已清除！");
+        });
+		
+		document.getElementById("goBtn").addEventListener("click", function(){
+			if (goBtnState){
+				goBtnState = 0;
+				this.classList.remove("active");
+			}
+			else{
+				goBtnState = 1;
+				this.classList.add("active");
+			}
+			alert(goBtnState);
+		});
+
+		document.getElementById("realyBtn").addEventListener("click", async function(){
+			if (~realyBtnState){
+				realyBtnState = 1;
+				this.classList.add("active");
+				
+				try {
+					
+					// await new Promise(resolve => setTimeout(resolve, 2000));
+					
+					// 截图逻辑
+					const mapContainer = document.getElementById("container");
+					const canvas = await html2canvas(mapContainer, {
+					    useCORS: true,
+					    allowTaint: false,
+					    logging: false,
+					    scale: 2
+					});
+					const imgUrl = canvas.toDataURL("image/png");
+					const link = document.createElement("a");
+					link.href = imgUrl;
+					link.download = "地图截图_" + new Date().getTime() + ".png";
+					link.click();
+					alert("截图成功！\nBase64前100字符：" + imgUrl.substring(0, 100) + "...");
+					
+				} 
+				catch (error) {
+					console.error("截图失败：", error);
+					alert("截图失败，请重试！");
+					goBtnState = 0;
+					this.classList.remove("active");
+				} 
+				finally {
+
+					goBtnState = 0;
+					this.classList.remove("active");
+					map.setMapStyleV2({
+					      styleId: '5ed901bc7f400d30eb2a9b211b7079d8',
+					    })
+					alert("执行了吗");
+				}
+				
+				//上传完成
+				
+				alert("执行结束")
+			}
+			else{
+				alert("正在执行")
+				// this.classList.add("active");
+			}
+			alert(goBtnState);
+		});
+		// 加载 点击捕获
+		document.getElementById("jiaZaiBtn").addEventListener("click", function(){
+			map.setMapStyleV2({
+			      styleId: 'b8ca8b0d0193dfdd79f9e54b8d79d67f',
+			    })
+			
+		});
+		
+		document.getElementById("yvLanBtn").addEventListener("click", function(){
+			
+			var point = new BMapGL.Point(demo_data[0][0], demo_data[0][1]);
+			
+			    map.centerAndZoom(point, 18);
+			    map.enableScrollWheelZoom(true);
+			    map.setTilt(35);
+			
+			    var track = new Track.View(map,{
+			        lineLayerOptions: {
+			            style: {
+			                strokeWeight: 8,
+			                strokeLineJoin: 'round',
+			                strokeLineCap: 'round'
+			            }
+			        }
+			    });
+			
+			    var trackData = [];
+			    var colorOffset = [];
+			
+			    for (var item of demo_data) {
+			        var point = new BMapGL.Point(item[0], item[1]);
+			        var trackPoint = new Track.TrackPoint(point);
+			        trackData.push(trackPoint);
+			        var choose = [0.9, 0.5, 0.1];
+			        var color = choose[Math.floor(Math.random() * choose.length)];
+			        colorOffset.push(color);
+			    }
+			
+			    trackLine = new Track.LocalTrack({
+			        trackPath: trackData,
+			        duration: 60,
+			        style: {
+			            sequence: true,
+			            marginLength: 32,
+			            arrowColor: '#fff',
+			            strokeTextureUrl: '//mapopen-pub-jsapi.bj.bcebos.com/jsapiGlgeo/img/down.png',
+			            strokeTextureWidth: 64,
+			            strokeTextureHeight: 32,
+			            traceColor: [27, 142, 236]
+			        },
+			        linearTexture: [[0, '#f45e0c'], [0.5, '#f6cd0e'], [1, '#2ad61d']],
+			        gradientColor: colorOffset
+			    });
+			
+			    trackLine.on(Track.LineCodes.STATUS, (status) => {
+			        switch (status) {
+			            case Track.StatusCodes.PLAY:
+			            case Track.StatusCodes.RESUME:
+			                break;
+			            case Track.StatusCodes.INIT:
+			            case Track.StatusCodes.PAUSE:
+			            case Track.StatusCodes.STOP:
+			            case Track.StatusCodes.FINISH:
+			                var box = trackLine.getBBox();
+			                if(box){
+			                    var bounds = [new BMapGL.Point(box[0], box[1]), new BMapGL.Point(box[2], box[3])];
+			                    map.setViewport(bounds);
+			                }
+			                break;
+			            default:
+			                break;
+			        }
+			    });
+			
+			    track.addTrackLine(trackLine);
+			    track.focusTrack(trackLine);
+			
+			    var movePoint = new Track.GroundPoint({ point: trackData[0].getPoint(),
+			        style:{
+			            url: '//mapopen-pub-jsapi.bj.bcebos.com/jsapiGlgeo/img/car.png',
+			            level: 18,
+			            scale: 1,
+			            size: new BMapGL.Size(16, 32),
+			            anchor: new BMapGL.Size(0.5,0.5),
+			        }
+			    });
+			    movePoint.addEventListener(Track.MapCodes.CLICK,(e)=>{
+			        console.log('Track.GroundPoint.click', e);
+			    })
+			    movePoint.addEventListener(Track.MapCodes.MOUSE_OVER,(e)=>{
+			        console.log('Track.GroundPoint.MOUSE_OVER', e);
+			    })
+			    movePoint.addEventListener(Track.MapCodes.MOUSE_OUT,(e)=>{
+			        console.log('Track.GroundPoint.MOUSE_OUT', e);
+			    })
+			    trackLine.setMovePoint(movePoint);
+
+			
+		});
+		
+		document.getElementById("trackStartBtn").addEventListener("click", function() {
+		    if (trackLine) {
+		        trackLine.startAnimation();
+		    } else {
+		        alert("请先点击“预览”加载轨迹！");
+		    }
+		});
+		
+		document.getElementById("trackPauseBtn").addEventListener("click", function() {
+		    if (trackLine) {
+		        trackLine.pauseAnimation();
+		    } else {
+		        alert("请先点击“预览”加载轨迹！");
+		    }
+		});
+		
+		document.getElementById("trackResumeBtn").addEventListener("click", function() {
+		    if (trackLine) {
+		        trackLine.resumeAnimation();
+		    } else {
+		        alert("请先点击“预览”加载轨迹！");
+		    }
+		});
+		
+		document.getElementById("trackStopBtn").addEventListener("click", function() {
+		    if (trackLine) {
+		        trackLine.stopAnimation();
+		    } else {
+		        alert("请先点击“预览”加载轨迹！");
+		    }
+		});
+		
+		
+		
+		
+		
+		 function startAnimation() {
+		    trackLine.startAnimation();
+		}
+		
+		function stopAnimation() {
+		    trackLine.stopAnimation();
+		
+		}
+		function pauseAnimation() {
+		    trackLine.pauseAnimation();
+		}
+		function resumeAnimation() {
+		    trackLine.resumeAnimation();
+		}
+
+		
+    </script>
+</body>
+</html>
